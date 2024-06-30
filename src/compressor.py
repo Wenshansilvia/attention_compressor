@@ -15,12 +15,19 @@ class Compressor:
     
     def load_model(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_path,
-            device_map=self.device_map,
-            trust_remote_code=True,
-            output_attentions=True
-        )
+        if not self.device_map:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
+                device_map=self.device_map,
+                trust_remote_code=True,
+                output_attentions=True
+            )
+        else:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_path,
+                trust_remote_code=True,
+                output_attentions=True
+            )
     
     def compress(self, doc, query, ratio=0.5):
         attention, text = attention_score(doc, query, self.model, self.tokenizer)
@@ -28,3 +35,7 @@ class Compressor:
         attention = gaussian_filter1d(attention, 1)
         words, _ = text_filter(words, attention, ratio)
         return ' '.join(words)
+    
+    def get_attention(self, doc, query):
+        attention, tokens, len_dict = full_attention_score(doc, query, self.model, self.tokenizer)
+        return attention, tokens, len_dict

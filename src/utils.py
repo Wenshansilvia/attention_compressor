@@ -97,7 +97,10 @@ def plot_line_chart(tokens, scores, title="Line Chart", xlabel="X Axis", ylabel=
     plt.show()
 
 def attn(input_text, model, tokenizer):
-    inputs = tokenizer(input_text, return_tensors="pt").to('cuda')
+    try: 
+        inputs = tokenizer(input_text, return_tensors="pt").to('cuda')
+    except:
+        inputs = tokenizer(input_text, return_tensors="pt")
 
     # Forward pass to get attention weights
     outputs = model(**inputs)
@@ -131,6 +134,23 @@ def attention_score(doc, query, model, tokenizer, prefix=14):
     mean_attention_weights, tokens = attn(text, model, tokenizer)
     doc_len = len(tokenizer(doc, return_tensors="pt")['input_ids'][0])
     return softmax(mean_attention_weights[-1][prefix: prefix+doc_len], axis=0), tokens[prefix: prefix+doc_len]
+
+def full_attention_score(doc, query, model, tokenizer, prefix=14):
+    messages = [
+        {"role": "user", "content": doc + '\n' + query},
+    ]
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+    mean_attention_weights, tokens = attn(text, model, tokenizer)
+    len_dict = {'prefix_end': 14}
+    len_dict['doc_end'] = len_dict['prefix_end'] + \
+        len(tokenizer(doc, return_tensors="pt")['input_ids'][0])
+    len_dict['query_end'] = len_dict['doc_end'] + \
+        len(tokenizer(query, return_tensors="pt")['input_ids'][0])
+    return mean_attention_weights[-1], tokens, len_dict
 
 def get_rank_list(score):
     sorted_index_list = [index for index, _ in sorted(enumerate(score), key=lambda x: x[1])]
