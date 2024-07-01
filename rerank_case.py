@@ -2,10 +2,12 @@ from src.load_data import load_data
 from src.compressor import Compressor
 import matplotlib.pyplot as plt
 from PIL import Image
+import numpy as np
 
 
 def filter_case(data, num_of_case):
-    return data['question'][:num_of_case], data['contexts'][:num_of_case][0], data['contexts'][:num_of_case][3]
+    data = data.select(range(num_of_case))
+    return data['question'], [c[0] for c in data['contexts']], [c[3] for c in data['contexts']]
 
 def plot_line_chart(tokens, scores, line_loc, title="Line Chart", xlabel="X Axis", ylabel="Y Axis"):
     fig, ax = plt.subplots(figsize=(60, 6))
@@ -22,9 +24,20 @@ def plot_line_chart(tokens, scores, line_loc, title="Line Chart", xlabel="X Axis
     plt.axvline(x=line_loc['prefix_end'], color='r', linestyle='--', linewidth=1)
     plt.axvline(x=line_loc['doc_end'], color='g', linestyle='--', linewidth=1)
     plt.axvline(x=line_loc['query_end'], color='b', linestyle='--', linewidth=1)
+
+    # 制定y轴统一长度，并添加每段的平均值横线
+    avg1 = np.mean(scores[:line_loc['prefix_end']])
+    avg2 = np.mean(scores[line_loc['prefix_end']+1:line_loc['doc_end']])
+    avg3 = np.mean(scores[line_loc['doc_end']+1:line_loc['query_end']])
+    avg4 = np.mean(scores[line_loc['query_end']+1:])
+    plt.ylim(0, 0.07)
+    # Add horizontal lines for the mean values
+    ax.hlines(y=avg1, xmin=0, xmax=line_loc['prefix_end'], colors='r', linestyles='-')
+    ax.hlines(y=avg2, xmin=line_loc['prefix_end']+1, xmax=line_loc['doc_end'], colors='g', linestyles='-')
+    ax.hlines(y=avg3, xmin=line_loc['doc_end']+1, xmax=line_loc['query_end'], colors='b', linestyles='-')
+    ax.hlines(y=avg4, xmin=line_loc['query_end']+1, xmax=len(tokens)-1, colors='purple', linestyles='-')
     
     plt.tight_layout()
-    #plt.show()
     return plt
 
 def concat_png(png_name_list, res_path):
@@ -54,8 +67,9 @@ def concat_png(png_name_list, res_path):
 if __name__ == '__main__':
     path = '/Users/wenshan/Desktop/ccir/注意力压缩/NQ/0.json'
     nq = load_data(path)
-    num_of_case = 50
+    num_of_case = 10
     qsts, re_ctxs, irr_ctxs = filter_case(nq, num_of_case)
+    print(len(qsts), len(re_ctxs), len(re_ctxs))
 
     model_path = '/Users/wenshan/Desktop/ccir/注意力压缩/Qwen2-0.5B-Instruct'
     compressor = Compressor(model_path, device_map = None)

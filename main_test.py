@@ -3,7 +3,7 @@ from src.generator import longchat_generator
 from tqdm import tqdm
 
 def test(data_path, res_file_name):
-    nq, prompts  = get_prompts(data_path)
+    nq, prompts  = get_prompts(data_path, ratio = 0.5)
     longchat_model_path = '/home/gomall/models/longchat-13b-16k'
     generator = longchat_generator(longchat_model_path)
     # generate answers
@@ -15,8 +15,7 @@ def test(data_path, res_file_name):
     nq.to_json(res_file_name)
 
 if __name__ == '__main__':
-    # Original prompt test
-    for i in [0,4,9,14,19]:
+    for i in [14,19]:
         data_path = '/home/gomall/work/NQ/{num}.json'.format(num=str(i))
-        res_file_name = 'test_results/nq_ori_prompt_{num}.json'.format(num=str(i+1))
+        res_file_name = 'test_results/nq_0.5_prompt_{num}.json'.format(num=str(i+1))
         test(data_path, res_file_name)
