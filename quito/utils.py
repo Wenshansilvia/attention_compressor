@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-
+from nltk.tokenize import sent_tokenize
+import re
 
 def reconstruct(tokens, attention):
     reconstructed_words = []
@@ -12,12 +13,17 @@ def reconstruct(tokens, attention):
     current_attn = 0
 
     for token, attn in zip(tokens, attention):
-        token = token.replace('Ċ', '\n')
-        if token.startswith("Ġ"):
+        #token = token.replace('Ċ', '\n')
+        if token.startswith("Ġ") or token.startswith("Ċ") or token.startswith("â"):
+            token = token.replace('Ċ', '')
+            token = token.replace('Ġ', '')
+            token = token.replace('â', '')
+            token = token.replace('Ģ', '')
+            token = token.replace('Ķ', '')
             if current_word:
                 reconstructed_words.append(current_word)
                 reconstructed_attn.append(current_attn)
-            current_word = token[1:]
+            current_word = token
             current_attn = attn
         else:
             current_word += token
@@ -100,7 +106,8 @@ def attn(input_text, model, tokenizer):
     try: 
         inputs = tokenizer(input_text, return_tensors="pt").to('cuda')
     except:
-        inputs = tokenizer(input_text, return_tensors="pt")
+        device = torch.device("mps")
+        inputs = tokenizer(input_text, return_tensors="pt").to(device)
 
     # Forward pass to get attention weights
     outputs = model(**inputs)
@@ -158,7 +165,8 @@ def get_rank_list(score):
     sorted_index_list = [index_mapping[index] for index in range(len(score))]
     return sorted_index_list
 
-def text_filter(text, score, ratio=0.5):
+def text_filter(text, score, ratio):
+    ratio = 1-ratio
     rank = get_rank_list(score)
     threshold = len(text) * ratio
     res_text = []
@@ -168,3 +176,92 @@ def text_filter(text, score, ratio=0.5):
             res_text.append(text[i])
             res_score.append(score[i])
     return res_text, res_score
+
+
+
+def sentence_filter(words, attention, ratio):
+    ori_words = words
+    budget_length = len(words) * ratio
+    text = ' '.join(words)
+    sentences = sent_tokenize(text)
+    sentence_scores = []
+    for sentence in sentences:
+        sentence_score = 0
+        words_in_sentence = []
+        pattern = r'[^\w\s]'
+        for i, w in enumerate(words):
+            _w = w.split('.')[0] if ('.' in w) else w
+            _w = _w.split('!')[0] if ('!' in _w) else _w
+            _w = _w.split('?')[0] if ('?' in _w) else _w
+            _w = re.sub(pattern, '', _w)
+            _w = _w[:-1] if _w.endswith('s') else _w
+            if _w in re.sub(pattern, '', sentence):
+                sentence_score = max(attention[i], sentence_score)
+                sentence.replace(w, '')
+                words_in_sentence.append((w, attention[i], 1))
+            else:
+                words = words[len(words_in_sentence):]
+                attention = attention[len(words_in_sentence):]
+                break
+        sentence_scores.append((sentence, sentence_score, words_in_sentence, len(words_in_sentence)))
+    assert(len(sentence_scores) == len(sentences))
+
+    # 选择前k个句子，使得总长度不超过整个段落长度*ratio
+    selected_index = []
+    current_length = 0
+    sorted_indices = sorted(range(len(sentence_scores)), key=lambda i: sentence_scores[i][1], reverse=True)
+    for index in sorted_indices:
+        if current_length + sentence_scores[index][-1] > budget_length:
+            breakpoint_sentence = sentence_scores[index]
+            budget_left = budget_length - current_length
+            break
+        selected_index.append(index)
+        current_length += sentence_scores[index][-1]
+    
+    selected_index.sort()
+    selected_sentences = [sentence_scores[index][0] for index in selected_index]
+    try:
+        return selected_sentences, breakpoint_sentence, budget_left
+    except:
+        print(sentence_scores)
+        print(words)
+        print(ori_words)
+        print(sentences)
+
+
+def _select_tuples(breakpoint_sentence, m):
+    tuples_list = breakpoint_sentence[-2] #拿到这个句子中的word list
+    # 找到score最大的index
+    max_index = max(range(len(tuples_list)), key=lambda i: tuples_list[i][1])
+    
+    selected_list = [tuples_list[max_index]]
+    left, right = max_index - 1, max_index + 1
+    
+    # 以max_index为中心，扩展selected_list直到其个数达到m
+    while sum([s[-1] for s in selected_list]) < m:
+        if left >= 0 and right < len(tuples_list):
+            selected_list.insert(0, tuples_list[left])
+            left -= 1
+            selected_list.append(tuples_list[right])
+            right += 1
+        elif left >= 0:
+            selected_list.insert(0, tuples_list[left])
+            left -= 1
+        elif right < len(tuples_list):
+            selected_list.append(tuples_list[right])
+            right += 1
+        else:
+            break  # 防止m大于tuples_list的长度，避免无限循环
+    
+    # 确保结果中的元素顺序与原列表中的顺序一致
+    selected_list.sort(key=lambda x: tuples_list.index(x))
+    
+    return selected_list
+
+
+def sentence_token_filter(words, attention, ratio):
+    selected_sentences, breakpoint_sentence, budget_left = sentence_filter(words, attention, ratio)
+    selected = _select_tuples(breakpoint_sentence, budget_left)
+    last_sentence = ' '.join([w[0] for w in selected])
+    selected_sentences.append(last_sentence)
+    return selected_sentences

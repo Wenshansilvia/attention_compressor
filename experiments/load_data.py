@@ -1,6 +1,7 @@
 from datasets import load_dataset
-from src.prompts import (nq_prompt)
-from src.compressor import Compressor
+from experiments.prompts import (nq_prompt)
+from quito.compressor import Compressor
+
 
 def load_data(path):
     print('start load dataset:', path)
@@ -8,21 +9,26 @@ def load_data(path):
     print('dataset loaded')
     return data
 
-def get_prompts(data_path, ratio = 1):
+def get_prompts(data_path, ratio, filter = None, model_path = 'Qwen/Qwen2-0.5B-Instruct'):
     nq = load_data(data_path)
+
     if ratio == 1:
         prompts = [
-            nq_prompt.format(contexts=''.join(data['contexts']),
+            nq_prompt.format(contexts='\n\n'.join(data['contexts']),
                             question=data['question'])
             for data in nq
         ]
     else:
-        model_path = '/home/gomall/models/Qwen2-0.5B-Instruct'
         compressor = Compressor(model_path)
         def compress(row):
             query = row['question']
             docs = row['contexts']
-            ctxs = '\n'.join([compressor.compress(doc, query, ratio=0.5) for doc in docs])
+            if not filter:
+                ctxs = '\n\n'.join([compressor.compress(doc, query, ratio) for doc in docs])
+            elif filter == 'sentence':
+                ctxs = '\n\n'.join([compressor.compress_sentence(doc, query, ratio) for doc in docs])
+            elif filter == 'sentence_token':
+                ctxs = '\n\n'.join([compressor.compress_sentence_token(doc, query, ratio) for doc in docs])
             return ctxs
         nq = nq.map(lambda x: {"compressed_contexts": compress(x)})  
         prompts = [
@@ -30,11 +36,5 @@ def get_prompts(data_path, ratio = 1):
                             question=data['question'])
             for data in nq
         ]
-        print(prompts)
     return nq, prompts
 
-
-if __name__ == '__main__':
-    
-    path = '/Users/wenshan/Desktop/ccir/注意力压缩/NQ/0.json'
-    nq, prompts = get_prompts(path)
