@@ -1,0 +1,5 @@
+fastchat
+datasets==2.19.2
+accelerate
+matplotlib
+nltk
