@@ -9,7 +9,7 @@ def load_data(path):
     print('dataset loaded')
     return data
 
-def get_prompts(data_path, ratio, filter = None, model_path = 'Qwen/Qwen2-0.5B-Instruct'):
+def get_prompts(data_path, ratio, filter, model_path = 'Qwen/Qwen2-0.5B-Instruct'):
     nq = load_data(data_path)
 
     if ratio == 1:
