@@ -4,15 +4,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 
 
-def batch_test_on_nq():
-    batch_size = 4  # Adjust this based on your GPU memory
-    model_path = ''
-    data_path = ''
-    res_file_name = ''
-    longchat_model_path = ''
-    ratio = 0.5
-    filter = 'sentence_token' # None, 'sentence', or 'sentence_token'
-    
+def batch_test_on_nq(batch_size, model_path, data_path, res_file_name, longchat_model_path, ratio, filter):
 
     nq, prompts  = get_prompts(data_path, ratio = ratio, filter = filter, model_path = model_path)
     nq = nq.add_column('prompts', prompts)
@@ -34,15 +26,7 @@ def batch_test_on_nq():
     nq.to_json(res_file_name)
 
 
-def batch_test_on_asqa():
-    batch_size = 4  # Adjust this based on your GPU memory
-    model_path = ''
-    data_path = ''
-    res_file_name = ''
-    longchat_model_path = ''
-    ratio = 0.5
-    filter = 'sentence_token' # None, 'sentence', or 'sentence_token'
-    
+def batch_test_on_asqa(batch_size, model_path, data_path, res_file_name, longchat_model_path, ratio, filter):
 
     asqa, prompts  = get_prompts_asqa(data_path, ratio = ratio, filter = filter, model_path = model_path)
     asqa = asqa.add_column('prompts', prompts)

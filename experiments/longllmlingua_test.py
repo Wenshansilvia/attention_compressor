@@ -1,19 +1,13 @@
 from llmlingua import PromptCompressor
 from experiments.load_data import load_data
-from experiments.prompts import (nq_prompt)
+from experiments.prompts import (nq_prompt, asqa_prompt)
 from experiments.generator import longchat_generator
 from tqdm import tqdm
 import torch
 import os
 
 
-def batch_test_on_nq():
-    batch_size = 4  # Adjust this based on your GPU memory
-    longchat_model_path = ''
-    res_file_name = ''
-    compress_model_path = ''
-    data_path = ''
-    ratio = 0.5
+def batch_test_on_nq(batch_size, compress_model_path, longchat_model_path, data_path, res_file_name, ratio):
 
     # compress contexts
     llm_lingua = PromptCompressor(model_name=compress_model_path)
@@ -68,13 +62,7 @@ def batch_test_on_nq():
     nq.to_json(res_file_name)
 
 
-def batch_test_on_nq():
-    batch_size = 4  # Adjust this based on your GPU memory
-    longchat_model_path = ''
-    res_file_name = ''
-    compress_model_path = ''
-    data_path = ''
-    ratio = 0.5
+def batch_test_on_nq(batch_size, compress_model_path, longchat_model_path, data_path, res_file_name, ratio):
 
     # compress contexts
     llm_lingua = PromptCompressor(model_name=compress_model_path)
@@ -110,7 +98,7 @@ def batch_test_on_nq():
     # generate answers
     asqa = load_data(res_file_name)
     prompts = [
-        nasqa_prompt.format(contexts=data['compressed_contexts'],
+        asqa_prompt.format(contexts=data['compressed_contexts'],
                         question=data['question'])
         for data in asqa
     ]
