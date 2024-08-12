@@ -1,7 +1,7 @@
 <h1 align="center"> QUITO: Accelerating Long-Context Reasoning through Query-Guided Context Compression </h1>
 
 <p align="center">
-<a href="TODO">📃 Paper</a>
+<a href="https://arxiv.org/abs/2408.00274">📃 Paper</a>
 
 # 🔍 Overview
 We release QUITO, a powerful **context compressor** that leverages attention of the question over the contexts to filter useless information. 
@@ -39,7 +39,16 @@ compressed_context = compressor.compress_sentence_token(doc="", query="", ratio=
 If you find the repository or paper helpful, please cite our work:
 
 ```
-@article{TODO
+@article{
+    @misc{wang2024quitoacceleratinglongcontextreasoning,
+      title={QUITO: Accelerating Long-Context Reasoning through Query-Guided Context Compression}, 
+      author={Wenshan Wang and Yihang Wang and Yixing Fan and Huaming Liao and Jiafeng Guo},
+      year={2024},
+      eprint={2408.00274},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2408.00274}, 
+}
 }
 ```
 
