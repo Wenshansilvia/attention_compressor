@@ -50,22 +50,33 @@ class Compressor:
             output_attentions=True
         ).to(self.device)
 
-    def compress(self, doc, query, ratio: float = 0.5):
-        """按 attention 压缩文本"""
+    def compress(self, doc, query, ratio: float = 0.5, word: bool = True):
+        """压缩文本（支持 word 模式和 token 模式）"""
         attention, text = attention_score(doc, query, self.model, self.tokenizer)
-        words, attention = reconstruct(text, attention)
+    
+        # 对齐 T5Compressor 的逻辑
+        if word:
+            words, attention, cnt = reconstruct(text, attention)
+        else:
+            words = text
+            cnt = [1] * len(words)
+    
+        # 可选高斯平滑
         if self.sigma:
             attention = gaussian_filter1d(attention, self.sigma)
-        words, _ = text_filter(words, attention, ratio)
-        return ' '.join(words)
     
-    def get_attention(self, doc, query):
-        attention, tokens, len_dict = full_attention_score(doc, query, self.model, self.tokenizer)
-        return attention, tokens, len_dict
+        # 过滤文本
+        words, attention = text_filter(words, attention, cnt, ratio)
+    
+        # 如果是 token 模式，重新聚合回词
+        if not word:
+            words, _, _ = reconstruct(words, attention)
+    
+        return ' '.join(words)
     
     def compress_sentence(self, doc, query, ratio: float = 0.5):
         attention, text = attention_score(doc, query, self.model, self.tokenizer)
-        words, attention = reconstruct(text, attention)
+        words, attention, _ = reconstruct(text, attention)
         if self.sigma:
             attention = gaussian_filter1d(attention, self.sigma)
         sentences, _, _ = sentence_filter(words, attention, ratio)
@@ -73,7 +84,7 @@ class Compressor:
     
     def compress_sentence_token(self, doc, query, ratio: float = 0.5):
         attention, text = attention_score(doc, query, self.model, self.tokenizer)
-        words, attention = reconstruct(text, attention)
+        words, attention, _ = reconstruct(text, attention)
         if self.sigma:
             attention = gaussian_filter1d(attention, self.sigma)
         sentences = sentence_token_filter(words, attention, ratio)
@@ -146,3 +157,4 @@ class T5Compressor(Compressor):
         if not word:
             words, _, _ = reconstruct(words, attention)
         return ' '.join(words)
+
