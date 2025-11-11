@@ -7,36 +7,37 @@ import re
 def reconstruct(tokens, attention):
     reconstructed_words = []
     reconstructed_attn = []
+    reconstructed_cnt = []
 
     # 初始化一个变量来保存当前正在构建的单词
     current_word = ""
     current_attn = 0
+    current_cnt = 1
 
     for token, attn in zip(tokens, attention):
-        #token = token.replace('Ċ', '\n')
-        if token.startswith("Ġ") or token.startswith("Ċ") or token.startswith("â"):
-            token = token.replace('Ċ', '')
-            token = token.replace('Ġ', '')
-            token = token.replace('â', '')
-            token = token.replace('Ģ', '')
-            token = token.replace('Ķ', '')
+        token = token.replace('Ċ', '\n')
+        if token.startswith("Ġ") or token.startswith("▁"):
             if current_word:
                 reconstructed_words.append(current_word)
                 reconstructed_attn.append(current_attn)
-            current_word = token
+                reconstructed_cnt.append(current_cnt)
+            current_word = token[1:]
             current_attn = attn
+            current_cnt = 1
         else:
             current_word += token
             current_attn = max(current_attn, attn)
+            current_cnt += 1
     if current_word:
         reconstructed_words.append(current_word)
         reconstructed_attn.append(current_attn)
-    return reconstructed_words, reconstructed_attn
+        reconstructed_cnt.append(current_cnt)
+    return reconstructed_words, reconstructed_attn, reconstructed_cnt
 
 def reconstruct_sentence(tokens, attention):
     reconstructed_sentences = []
     reconstructed_attn = []
-    words, attention = reconstruct(tokens, attention)
+    words, attention, _ = reconstruct(tokens, attention)
     current_sentence = ""
     current_attn = 0
     for word, attn in zip(words, attention):
@@ -58,7 +59,7 @@ def reconstruct_sentence(tokens, attention):
 def reconstruct_paragraph(tokens, attention):
     reconstructed_paragraph = []
     reconstructed_attn = []
-    words, attention = reconstruct(tokens, attention)
+    words, attention, _ = reconstruct(tokens, attention)
     current_paragraph = ""
     current_attn = 0
     for word, attn in zip(words, attention):
@@ -165,19 +166,24 @@ def get_rank_list(score):
     sorted_index_list = [index_mapping[index] for index in range(len(score))]
     return sorted_index_list
 
-def text_filter(text, score, ratio):
-    ratio = 1-ratio
-    rank = get_rank_list(score)
-    threshold = len(text) * ratio
+def text_filter(text, score, cnt, ratio=0.5):
+    rank = get_sorted_ids(score)
+    word_filter = [False] * len(text)
+    threshold = sum(cnt) * ratio
+    current_cnt = 0
+    for i in rank:
+        current_cnt += cnt[i]
+        if current_cnt < threshold:
+            word_filter[i] = True
+        else:
+            break
     res_text = []
     res_score = []
-    for i in range(len(text)):
-        if rank[i] > threshold:
-            res_text.append(text[i])
-            res_score.append(score[i])
+    for w, s, j in zip(text, score, word_filter):
+        if j:
+            res_text.append(w)
+            res_score.append(s)
     return res_text, res_score
-
-
 
 def sentence_filter(words, attention, ratio):
     ori_words = words
@@ -265,3 +271,4 @@ def sentence_token_filter(words, attention, ratio):
     last_sentence = ' '.join([w[0] for w in selected])
     selected_sentences.append(last_sentence)
     return selected_sentences
+
