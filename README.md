@@ -80,14 +80,17 @@ pip install -r requirements.txt
 from quito.compressor import Compressor
 
 compressor = Compressor('Qwen/Qwen2-0.5B-Instruct')
+# Test case
+doc="Artificial intelligence is evolving rapidly."
+query="Summarize the main idea."
 # Use Phrase Level Filtering 
-compressed_context = compressor.compress(doc="", query="", ratio=0.5)
+compressed_context = compressor.compress(doc=doc, query=query, ratio=0.5)
 
 # Or use Sentence Level Filtering
-compressed_context = compressor.compress_sentence(doc="", query="", ratio=0.5)
+compressed_context = compressor.compress_sentence(doc=doc, query=query, ratio=0.5)
 
 # Or use Dynamic Sentence Level Filtering
-compressed_context = compressor.compress_sentence_token(doc="", query="", ratio=0.5)
+compressed_context = compressor.compress_sentence_token(doc=doc, query=query, ratio=0.5)
 ```
 
 ## 3️⃣ Encoder–Decoder Models (e.g., T5, FLAN-T5, BART)
